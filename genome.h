@@ -54,6 +54,7 @@ class genome{
         int get_fitness();
         void set_fitness(int );
         void randomize_genome();
+        void copy_genome(genome *src_genome);
         void mutate();
         void mutate(float percent);
         void dump_genome();
@@ -62,6 +63,12 @@ class genome{
         void crossover();
 
 };
+
+void genome::copy_genome(genome *src_genome)
+{
+    bcopy(src_genome->genome_ptr, genome_ptr, (sizeof(int) * gene_len));
+}
+
 
 void genome::crossover()
 {
@@ -349,6 +356,8 @@ void genome_operator::crossover_genepool(genome *head[], int gene_pool_size, flo
 {
     for(int indx = KEEPALIVE_POPULATION; indx < gene_pool_size; indx++)
     {
+        /* Take the sucessful parents and do crossover and mutation on them */
+        head[indx]->copy_genome(head[indx % KEEPALIVE_POPULATION]);
         head[indx]->mutate(mutation_percent);
     }
 }

@@ -52,7 +52,7 @@ int main() {
 
         int iteration = 0;
 
-        while (iteration++ < 100000) {
+        while (iteration++ < 1000) {
 
             g_op.sort_gene_pool(gene_pool, GENE_POOL_SIZE);
 
