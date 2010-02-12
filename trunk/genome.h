@@ -8,8 +8,6 @@
 #define MUTATION_PROPABLITY 0.0901 /* 50 percent */
 #define MUTATION_FACTOR (RANGE * MUTATION_PROPABLITY) 
 
-/* Number of parents from previous generation to take to next gen */
-#define KEEPALIVE_POPULATION 5 
 
 #define WORST_FITNESS 0xffff
 
@@ -112,6 +110,7 @@ void genome::dump_genome(int *required_frames, int no_of_frames, int channel_siz
 {
     int used_up_size = 0;
     int indx = 0;
+    int channels_used = 0;
     while(indx < gene_len) {
 
         if (used_up_size + required_frames[*(genome_ptr+indx)] <= channel_size) {
@@ -121,13 +120,17 @@ void genome::dump_genome(int *required_frames, int no_of_frames, int channel_siz
             /* Next frame */
             indx++;
         } else {
+            printf ("Wastage = %d\n", channel_size - used_up_size);
             printf ( "\n Next Channel \n");
+            channels_used++;
             used_up_size = 0;
         }
 
     }
 
-    printf("\n");
+    printf("\nWastage percent = %d\n", (get_fitness() * 100) /(channels_used * channel_size));
+
+    printf("---------------------------------------------------\n");
 }
 
 genome::genome(int len)
@@ -228,6 +231,8 @@ class genome_operator{
     public:
         ~genome_operator();
         int calculate_fitness(genome *genome);
+        int is_genes_duplicate(genome *a, genome *b);
+        void kill_duplicate_parents(genome *head[], int gene_pool_size);
         void sort_gene_pool(genome *head[], int gene_pool_size);
         void calc_fitness_of_pool(genome *head[], int gene_pool_size);
         void crossover_genepool(genome *head[], int gene_pool_size);
@@ -324,6 +329,7 @@ int genome_operator::calculate_fitness(genome *some_genome)
 #ifdef DEBUG
                 //printf("%d:Frame size %d cut\n", indx, frame_to_be_cut_next);
 #endif /* DEBUG */
+                /* Cut the frame from the channel */
                 length_usedup += frame_to_be_cut_next;
                 /* Move to next frame to be cut */
                 indx++;
@@ -336,11 +342,56 @@ int genome_operator::calculate_fitness(genome *some_genome)
                 length_usedup = 0;
             }
     }
+    /* Add up the last bits */
+    channel_size_remaining = channel_size - length_usedup;
+    wastage += channel_size_remaining;
+
     some_genome->set_fitness(wastage);
 #ifdef DEBUG
     //printf(" Wastage = %d\n", wastage);
 #endif /* DEBUG */
 }
+
+int genome_operator::is_genes_duplicate(genome *a, genome *b)
+{
+    if (memcmp(a->genome_ptr, b->genome_ptr, (b->gene_len * sizeof(int))) == 0)
+    {
+        /* A Match */
+        printf ("################\n");
+        printf (" Found a match\n");
+        printf ("################\n");
+        printf ("################\n");
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+void genome_operator::kill_duplicate_parents(genome *head[], int gene_pool_size)
+{
+    for (int indx=0; indx < KEEPALIVE_POPULATION; indx++)
+    {
+        for (int count=0; count < KEEPALIVE_POPULATION; count++)
+        {
+            if (indx != count)
+            {
+                /* Dont let it match itself */
+                if (head[count]->get_fitness() == head[count]->get_fitness())
+                {
+                    /* Let the fitness match */
+                    if (is_genes_duplicate(head[indx], head[count]))
+                    {
+                        /* If its duplicate lets not keep it */
+                        head[indx]->randomize_genome();
+                        /* Calculate new fitness */
+                        calculate_fitness(head[indx]);
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 
 
